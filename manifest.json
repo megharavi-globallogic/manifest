@@ -1,0 +1,57 @@
+{
+   "vizio_module_release_details": [
+    {
+       "release": "FUR4.0",
+       "release_type": "nightly",
+       "chipset": "5597",
+       "all_modules_branch": "master",
+       "conjure_branch": "release-FUR4.0",
+       "major_minor_version": "4.0",
+       "initial_build_patch_version": "401.0",
+       "build_increment": "true",
+       "apollo_name": "Vizio_linux_t-apollo-mp-1501-1638-3-001-33-002-63-001-754",
+       "module_snap_number": "null",
+       "artifactory_output_path": "vizio-dallas-module-releases"
+    }
+  ],
+   "vizio_modules": [
+    {
+      "module_name": "NDK",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashndk": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "hhhhhhhhhhhhhhhhhhhh"
+        },
+        {
+          "repo_name": "vizio_ndk_implementation",
+          "hash_value": "jjjjjjjjjjjjjjjjj"
+        }
+      ]
+    },
+       {
+      "module_name": "LOGGER",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "deb13398971f6c1017b2b525d559a372ff42fc1f"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "deb13398971f6c1017b2b525d559a372ff42fc1f"
+        }
+      ]
+    }
+  ]
+}
