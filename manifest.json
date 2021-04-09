@@ -52,8 +52,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
-  ]
+    },
    {
       "module_name": "VIZIOS",
       "module_version_release": "null",
@@ -72,7 +71,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
+    },
 {
       "module_name": "CONJURE",
       "module_version_release": "null",
@@ -91,7 +90,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
+    },
 {
       "module_name": "VIZIO_SDK",
       "module_version_release": "null",
@@ -110,7 +109,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
+    },
 {
       "module_name": "VZSERVICES",
       "module_version_release": "null",
@@ -129,7 +128,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
+    },
 {
       "module_name": "SC_ASSETS",
       "module_version_release": "null",
@@ -148,7 +147,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
+    },
 {
       "module_name": "ACR",
       "module_version_release": "null",
@@ -167,7 +166,7 @@
           "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
         }
       ]
-    }
+    },
 {
       "module_name": "SYM_READER",
       "module_version_release": "null",
