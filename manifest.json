@@ -61,7 +61,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashvizios": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
@@ -80,7 +80,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashconjure": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
@@ -99,7 +99,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashVIZIO_SDKr": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
@@ -118,7 +118,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashVZSERVICES": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
@@ -137,7 +137,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashSC_ASSETS": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
@@ -156,7 +156,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashACR": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
@@ -175,7 +175,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hashlogger": [
+      "hashSYM_READER": [
         {
           "repo_name": "ndk",
           "hash_value": "nnnnnnnnnnnnnnnnnn"
