@@ -54,4 +54,137 @@
       ]
     }
   ]
+   {
+      "module_name": "VIZIOS",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
+{
+      "module_name": "CONJURE",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
+{
+      "module_name": "VIZIO_SDK",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
+{
+      "module_name": "VZSERVICES",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
+{
+      "module_name": "SC_ASSETS",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
+{
+      "module_name": "ACR",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
+{
+      "module_name": "SYM_READER",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
 }
