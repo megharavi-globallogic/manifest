@@ -1,0 +1,19 @@
+{
+      "module_name": "LOGGER",
+      "module_version_release": "null",
+      "build_version": "null",
+      "patch_version": "null",
+      "target": "null",
+      "module_size": "null",
+       
+      "hashlogger": [
+        {
+          "repo_name": "ndk",
+          "hash_value": "nnnnnnnnnnnnnnnnnn"
+        },
+        {
+          "repo_name": "logger",
+          "hash_value": "kjjjjjjjjjjjjjjjjjjjjj"
+        }
+      ]
+    }
