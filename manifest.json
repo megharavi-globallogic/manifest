@@ -23,7 +23,7 @@
       "target": "null",
       "module_size": "null",
        
-      "hash": [
+      "hashndk": [
         {
           "repo_name": "ndk",
           "hash_value": "hhhhhhhhhhhhhhhhhhhh"
