@@ -14,7 +14,7 @@
        "artifactory_output_path": "vizio-dallas-module-releases"
     }
   ],
-   "vizio_modules": [
+   "module_details": [
     {
       "module_name": "NDK",
       "module_version_release": "null",
@@ -22,6 +22,7 @@
       "patch_version": "null",
       "target": "null",
       "module_size": "null",
+       "module_version_release_artifactory_path"="null"
        
       "hashndk": [
         {
