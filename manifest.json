@@ -3,7 +3,7 @@
     {
        "release": "FUR4.0",
        "release_type": "nightly",
-       "chipset": "5597",
+       "chipset": "5581",
        "all_modules_branch": "master",
        "conjure_branch": "release-FUR4.0",
        "major_minor_version": "4.0",
