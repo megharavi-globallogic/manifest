@@ -13,17 +13,5 @@
        "module_snap_number": "null",
        "artifactory_output_path": "vizio-dallas-module-releases"
     }
-  ],
-   
-   "module_details": [
-    {
-      "module_name": "NDK",
-      "module_version_release": "null",
-      "build_version": "null",
-      "patch_version": "null",
-      "target": "null",
-      "module_size": "null",
-      "module_version_release_artifactory_path":"null"
-    } 
-   ]
+  ]
 }
