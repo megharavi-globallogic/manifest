@@ -6,7 +6,6 @@ pipeline {
     }
    stages {
     	stage('run-parallel-branches') {
-            steps {
                 parallel(
                    stage('run1') {
                         steps {
@@ -19,7 +18,6 @@ pipeline {
                         }
                     }
                )
-            }
         }
             
             
