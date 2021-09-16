@@ -8,9 +8,22 @@ pipeline {
     	stage("set version name"){
         	steps {
                 	script {
-                    echo "$BUILD_NUMBER"                    
-                  }
-          }
-      }
+                        parallel{
+                            stage{
+                                echo "$BUILD_NUMBER"                    
+                            }
+                            stage{
+                                echo "$BUILD_NUMBER"                    
+                            }
+                            
+                        }
+                    }
+            }
+        }
+            
+            
+            
+            
+            
    }
 }
