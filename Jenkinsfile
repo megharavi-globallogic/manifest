@@ -5,19 +5,16 @@ pipeline {
       //BUILD_NUMBER = "${params.BUILD_NUMBER}"
     }
    stages {
-    	stage("set version name"){
-        	steps {
-                	script {
-                        parallel{
-                            stage{
-                                echo "$BUILD_NUMBER"                    
-                            }
-                            stage{
-                                echo "$BUILD_NUMBER"                    
-                            }
-                            
-                        }
+    	stage('run-parallel-branches') {
+            steps {
+                parallel(
+                    a: {
+                        echo "This is branch a"
+                    },
+                    b: {
+                        echo "This is branch b"
                     }
+                )
             }
         }
             
