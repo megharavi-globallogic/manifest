@@ -4,7 +4,13 @@ pipeline {
       manifest_file = "ddkndksndksn"
       //BUILD_NUMBER = "${params.BUILD_NUMBER}"
     }
+    
    stages {
+        stage('before') {
+           steps {
+               println("before")
+           }
+       }
     	stage('run-parallel-branches') {
                 parallel(
                    stage('run1') {
