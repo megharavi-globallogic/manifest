@@ -6,6 +6,10 @@ pipeline {
 		stage('Print .......') {
         		steps {
 				script {
+					sh '''
+						sudo git checkout master 
+						sudo git clean
+					'''
     					  echo "manifest"
                 		}
 			}
