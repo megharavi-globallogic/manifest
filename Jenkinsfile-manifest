@@ -1,6 +1,7 @@
 pipeline {
 	agent any
    stages {
+   	parallel{
 		stage('Print .......') {
         		steps {
 				script {
@@ -35,10 +36,12 @@ pipeline {
                 		}
 			}
 		}
+	}
 		stage('Print pppppopppp') {
         		steps {
 				script {
 					sh'''
+						git checkout master
 						git add manifest.json
 						git diff-index --quiet HEAD || git commit -m "Update versions"
 						git pull
