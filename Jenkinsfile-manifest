@@ -1,0 +1,16 @@
+pipeline {
+	agent any
+	environment {
+    manifest = "manifest"
+   }
+   stages {
+		stage('Print Information') {
+        		steps {
+	    			  script {
+              
+              
+                echo "manifest"
+                }
+               
+              }
+              
