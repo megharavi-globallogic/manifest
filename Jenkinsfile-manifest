@@ -8,7 +8,7 @@ pipeline {
 				script {
 					sh '''
 						sudo git checkout master 
-						sudo git clean
+						sudo git clean -f
 					'''
     					  echo "manifest"
                 		}
