@@ -1,16 +1,55 @@
 pipeline {
 	agent any
-	environment {
-    manifest = "manifest"
-   }
    stages {
-		stage('Print Information') {
+		stage('Print .......') {
         		steps {
-	    			  script {
-              
-              
-                echo "manifest"
-                }
-               
-              }
+				script {
+    					  echo "manifest"
+                		}
+			}
+		}
+		stage('Print ,,,,,,,') {
+        		steps {
+				script {
+				sh 'jq -e  '(.vizio_module_release_details[] | .major_minor_version) = "1.2.2"' manifest.json >manifest.json.tmp && mv manifest.json.tmp manifest.json '
+                		}
+			}
+		}
+		stage('Print ]]]]]]]]]') {
+        		steps {
+				script {
+				sh 'jq -e  '(.vizio_module_release_details[] | .initial_build_patch_version) = "1.2.2.2.2.2.2.2"' manifest.json >manifest.json.tmp && mv manifest.json.tmp manifest.json '
+                		}
+			}
+		}
+		stage('Print ppppppppp') {
+        		steps {
+				script {
+				sh 'jq -e  '(.vizio_module_release_details[] | .apollo_name) = "1.2.2.4.4.4.4.4.4.4.4.4.4.4.4"' manifest.json >manifest.json.tmp && mv manifest.json.tmp manifest.json '
+                		}
+			}
+		}
+		stage('Print ppppppppp') {
+        		steps {
+				script {
+					sh'''
+						git add manifest.json
+						git diff-index --quiet HEAD || git commit -m "Update versions"
+						git pull
+						git push --force origin master
+					
+					'''
+				}
+			}
+		}
+   
+   
+   
+   
+   
+   
+   
+   }
+   
+}
               
