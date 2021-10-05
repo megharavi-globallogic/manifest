@@ -1,0 +1,907 @@
+def repack_inputs="";
+def slackobj1=[];
+def slackobj2=[];
+def confluence_inputs="";
+def setVersion()
+{
+	//download base firmware
+	sh label: '', script: 'rm -rf base_firmware'
+	rtDownload (
+		serverId: 'artifactory',
+		spec:
+		"""{
+			"files": [
+			{
+				"pattern": "${base_firmware_version_artifactory_path}${chipset}/${base_firmware_version}",
+                        	"target": "./base_firmware/",
+			        "flat": "true"						  
+			}
+			]
+		}""",
+		failNoOp: true
+	)
+	
+	//set firmware repack version
+	
+	env.base_firmware_version_stripped = getfirmwareversion("${base_firmware_version}", "${chipset}")
+	
+	sh label: '', script: 'rm -rf repack_firmware'
+	sh 'mkdir repack_firmware'		
+	
+	env.base_firmware_version_release_type = "${base_firmware_version_release_type}"
+	println "====base_firmware_version_release_type: ${base_firmware_version_release_type}"
+	
+	if ( release_type == "feature" )
+	{
+		rtDownload (
+		serverId: 'artifactory',
+		spec:
+		"""{
+			"files": [
+		    	{
+	  		 	"pattern": "${firmware_repack_upload_path}/*",
+	 		 	"target": "./repack_firmware/",
+	 		 	"props": "release.repack.type=${base_firmware_version_stripped}-devlatest;release.repack.feature=${base_firmware_version_release_type};release.version=${release_type}",
+	  		 	"flat": "true"
+								  
+		     	}
+		  	]
+	        }"""
+		)
+	}
+	else {
+		rtDownload (
+		serverId: 'artifactory',
+		spec:
+		"""{
+			"files": [
+		    	{
+	  		 	"pattern": "${firmware_repack_upload_path}/*",
+	 		 	"target": "./repack_firmware/",
+	 		 	"props": "release.repack.type=${base_firmware_version_stripped}-devlatest;release.version=${release_type}",
+	  		 	"flat": "true"
+								  
+		     	}
+		  	]
+	        }"""
+		)
+	}
+
+	//get downloaded repack firmware version if any and store it in repack firmware version response 
+	final String repack_firmware_version_response = sh(script: "ls ./repack_firmware", returnStdout: true).trim()
+			
+	//if it is not null add +1 to the existing repack firmware at the end
+	if (repack_firmware_version_response != null && !repack_firmware_version_response.isEmpty()) {
+	
+		def base_firmware_version_stripped = getfirmwareversion(repack_firmware_version_response, chipset)
+		println "=============base_firmware_version_stripped: ${base_firmware_version_stripped}=========="
+
+		def set_version = "${base_firmware_version_stripped}".substring("${base_firmware_version_stripped}".lastIndexOf("-")+1)
+		int set_version_increment = "${set_version}".toInteger()+1
+		if ( release_type == "nightly" )
+		{
+			//store final repack version number
+			env.NEW_FIRMWARE_VERSION_NUMBER = "${base_firmware_version_stripped}".substring(0,"${base_firmware_version_stripped}".indexOf("-")+1)+"nightly-${set_version_increment}"
+			env.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL = "${model_group}"+"${base_firmware_version_stripped}".substring(0,"${base_firmware_version_stripped}".indexOf("-")+1)+"nightly-${set_version_increment}"
+		}
+		if ( release_type == "feature" )
+		{
+			if ("${base_firmware_version_release_type}" != null && "${base_firmware_version_release_type}" != "NULL") 
+			{
+				//store final repack version number
+				env.NEW_FIRMWARE_VERSION_NUMBER = "${base_firmware_version_stripped}".substring(0,"${base_firmware_version_stripped}".lastIndexOf("-")+1)+"${set_version_increment}"
+				env.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL = "${model_group}"+"${base_firmware_version_stripped}".substring(0,"${base_firmware_version_stripped}".lastIndexOf("-")+1)+"${set_version_increment}"
+			}
+			else
+			{
+				println "============did not fill in information of base_firmware_version_release_type in manifests of feature branch========"
+				exit 1;
+			}
+		}
+		if ( release_type == "official" )
+		{
+		//store final repack version number
+			env.NEW_FIRMWARE_VERSION_NUMBER = "${base_firmware_version_stripped}".substring(0,"${base_firmware_version_stripped}".lastIndexOf("-")+1)+"${set_version_increment}"
+			env.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL = "${model_group}"+"${base_firmware_version_stripped}".substring(0,"${base_firmware_version_stripped}".lastIndexOf("-")+1)+"${set_version_increment}"
+		}
+		//if no repack firmware is found start it with -1	
+	} 
+	else { 
+		def set_version = getfirmwareversion("${base_firmware_version}", "${chipset}")
+		if ( release_type == "nightly" )
+		{
+			env.NEW_FIRMWARE_VERSION_NUMBER = "${set_version}"+"-nightly-1"
+			env.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL = "${model_group}"+"${set_version}"+"-nightly-1"
+		}
+		if ( release_type == "feature" )
+		{
+			if ("${base_firmware_version_release_type}" != null && "${base_firmware_version_release_type}" != "NULL") 
+			{
+				env.NEW_FIRMWARE_VERSION_NUMBER = "${set_version}"+"-${base_firmware_version_release_type}-1"
+				env.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL = "${model_group}"+"${set_version}"+"-${base_firmware_version_release_type}-1"
+			}
+			else
+			{
+				println "============did not fill in information of base_firmware_version_release_type in manifests of feature branch========"
+				exit 1;
+			}
+		}
+		if ( release_type == "official" )
+		{
+			env.NEW_FIRMWARE_VERSION_NUMBER = "${set_version}"+"-1"
+			env.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL = "${model_group}"+"${set_version}"+"-1"
+		}
+	} 
+	
+	
+}
+
+def getfirmwareversion(def basefirmware, def chipset) {
+
+	def startindex
+	def endindex
+	
+	if (chipset == "15x" || chipset == "17x" || chipset == "18x") {
+		startindex = 6
+		endindex = 4
+	} 
+	else if (chipset == "30x" || chipset == "31x" || chipset == "33x"){
+		startindex = 7
+		if (basefirmware.contains("secure_rls")) {
+			endindex = 15
+		} else {
+			endindex = 4
+		}
+	} 
+	else if (chipset == "32x"){
+		startindex = 8
+		if (basefirmware.contains("secure_rls")) {
+			endindex = 15
+		} else {
+			endindex = 4
+		}
+	} 
+	else if (chipset == "34x"){
+		startindex = 8
+		if (basefirmware.contains("secure_rls")) {
+			endindex = 15
+		} else {
+			endindex = 4
+		}
+	} 
+	
+	else if (chipset == "sx7a" || chipset == "sx7b"){
+		startindex = 5
+		if (basefirmware.contains("REL")) {
+			endindex = 8
+		} else {
+			endindex = 4
+		}
+	}
+	//cut the length of the version string stored in base firmware version, to get the exact number
+	return basefirmware.substring(startindex, basefirmware.length() - endindex)
+}
+
+def splitString(def param) {
+    param = param.substring(1, param.length()-1);
+    param = param.replaceAll("\\s","")
+    param = param.split(',') 
+    return param;
+}
+
+
+pipeline {
+	agent any
+	environment {
+	
+	//get release type from upstream
+	release_type = "${params.release_type}"
+	signing_type = "${params.signing_type}"
+	approval_type = "${params.approval_type}"
+	emailaddress = "${params.emailaddress}"
+	get_firmware_repackage_branch = "${params.firmware_repackage_branch}"
+	manifest_pipeline_job_name = "${params.manifest_pipeline_job_name}"
+	
+	//pipeline job names
+	//manifest_pipeline_job_name = "repack-firmware-nightly-manifest"
+	manifest_pipeline_url = "${JENKINS_URL}/job/${manifest_pipeline_job_name}/${PARENT_BUILD_NUMBER}/changes"
+	repack_pipeline_job_name = "${WORKSPACE}"
+	
+	//read manifest file from upstream
+	upstream = "/var/lib/jenkins/workspace/${manifest_pipeline_job_name}/${PARENT_BUILD_NUMBER}-manifest"
+        manifest = readJSON file: "/${upstream}/manifest.json"
+				
+        //get chipset details
+	soc = "${manifest.chipset_details[0].soc}"
+	model = "${manifest.chipset_details[0].model}"
+	model_group = "${manifest.chipset_details[0].model_group}"
+	chipset = "${manifest.chipset_details[0].chipset}"
+	manifest_file_name = "${manifest.chipset_details[0].manifest_file_name}"
+	slack_channel = "${manifest.chipset_details[0].slack_channel}"
+	slack_channel_weekly = "dallas-india-qa"
+	
+	//get firmware details
+	base_firmware_version = "${manifest.firmware_version_details[0].base_firmware_version}"
+	base_firmware_version_release_type = "${manifest.firmware_version_details[0].base_firmware_version_release_type}"
+	base_firmware_version_artifactory_path = "${manifest.firmware_version_details[0].base_firmware_version_artifactory_path}"
+	vizio_sign_in_path = "${manifest.firmware_version_details[0].vizio_sign_in_path}"
+	
+	firmware_repack_artifactory_directory = "${manifest.firmware_version_details[0].firmware_repack_artifactory_directory}"
+	firmware_repack_upload_path = "${firmware_repack_artifactory_directory}/${release_type}/${chipset}/firmware-repack-module"
+	firmware_repack_vizio_modules_upload_path = "${firmware_repack_artifactory_directory}/${release_type}/${chipset}/firmware-repack-vizio-modules"
+	firmware_repack_module_release_notes_upload_path = "${firmware_repack_artifactory_directory}/${release_type}/${chipset}/firmware-repack-release-notes"
+	vizio_repack_module_upload_artifactory_path_to_soc = "${manifest.firmware_version_details[0].vizio_repack_module_upload_artifactory_path_to_soc}"
+	
+	//get module information
+        module_name = "${manifest.module_details.module_name}"
+        module_version = "${manifest.module_details.module_version_release}"
+        module_download_artifactory_path = "${manifest.module_details.module_version_release_artifactory_path}"
+	path_for_rearranging_module = "${manifest.module_details.git_repo_path_for_rearranging_module}"
+        rearranging_module_script_name = "${manifest.module_details.git_rearranging_module_repack_script_name}"
+        rearranging_module_output_name = "${manifest.module_details.output_name_of_the_rearranged_module}"
+	
+	def readContent = ""
+	
+	sideload_signing_pipeline_job_name = "auto-trigger-firmware-signing-sideload"
+	sideload_dev_signing_pipeline_job_name = "auto-trigger-firmware-signing-sideload-dev"
+	ota_signing_pipeline_job_name = "auto-trigger-firmware-signing-ota"
+	approval_devqa_pipeline_job_name = "auto-trigger-firmware-approval-devqa"
+	approval_dev_pipeline_job_name = "auto-trigger-firmware-approval-dev"
+		
+        }
+	
+	stages {
+		stage("get version"){
+            		steps {
+                		script {
+					echo "checkout branch == $manifest_file_name"
+					sh """
+						rm -rf *
+						cp /${upstream}/manifest.json /var/lib/jenkins/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/fw-repack-manifest.json
+						
+					"""
+					setVersion();
+                		}
+            		}
+        	}
+		stage("set version name"){
+            		steps {
+                		script {
+                    			//new firmware version
+                    			currentBuild.displayName = "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"
+					
+					//base firmware version path
+		   			env.base_firmware = "./base_firmware/${base_firmware_version}" 
+                		}
+            		}
+        	}
+        	stage('Checkout Repackage Repo from GitHub') {
+            		steps {
+				script {
+					
+          get_firmware_repackage_branch = "cast_root-pr"
+					println "=======firmware repackage branch: ${get_firmware_repackage_branch}\n=======chipset: ${chipset}"
+                			git branch: "${get_firmware_repackage_branch}", url: 'git@github.com:BuddyTV/firmware-repackage.git'
+				}
+            		}
+        	}
+        	stage('Download Artifacts and Repack') {
+            		steps {
+				script {
+					sh """
+					rm -rf manifest.list manifest.json fw-repack-manifest.json
+					"""
+                			sh label: '', script: "rm -rf firmware-package-modules; mkdir firmware-package-modules"
+					module_name = splitString(module_name)
+					module_version = splitString(module_version)
+					module_download_artifactory_path = splitString(module_download_artifactory_path)
+					path_for_rearranging_module = splitString(path_for_rearranging_module)
+					rearranging_module_script_name = splitString(rearranging_module_script_name)
+					rearranging_module_output_name = splitString(rearranging_module_output_name)
+					
+					//create a directory with new firmware version inside firmware-package-modules
+					sh 'mkdir firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}'
+					
+					if(module_version.length < 10){
+						for(int i=0; i<module_version.length; i++){
+							def newslackobj = [
+								"type": "mrkdwn",
+								"text": "*${module_name[i]}*:\n${module_version[i]}"
+							]
+							slackobj1.add(newslackobj)
+						 }
+	                    		}
+					else{
+						 for(int i=0; i < 10; i++){
+						        def newslackobj = [
+							        "type": "mrkdwn",
+								"text": "*${module_name[i]}*:\n${module_version[i]}"
+						        ]
+						        slackobj1.add(newslackobj)					
+						  }						
+						  for(int i=10; i < module_version.length; i++) {
+    							def newslackobj = [
+		    						"type": "mrkdwn",
+								"text": "*${module_name[i]}*:\n${module_version[i]}"
+				    			]
+					    		slackobj2.add(newslackobj)					
+						    }
+					} 
+					
+					 def newslackobj = [
+		    				"type": "mrkdwn",
+		    				"text": "-"
+			    		]
+				    	slackobj2.add(newslackobj)
+
+					//create a release notes file, which contains version numbers
+					writeFile file: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}-releasenotes.txt", text: "VIZIO Firmware repack module inserted versions for: ${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"
+					
+					//will take firmware modules if module version is not null in manifest file
+					for(int i=0; i<module_version.length; i++) 
+					{
+						if( module_version[i] != "NULL")
+						{	
+							//download all module versions which are not null
+							path=module_download_artifactory_path[i]+module_version[i]
+							
+							
+							//confluence
+							confluence_inputs="${confluence_inputs}<td><p>${module_name[i]}:\\ <b>${module_version[i]}<\\/b><\\/p><\\/td>"
+						
+					        	//to know module versions inside vizios
+							if( module_name[i] == "VIZIOS") 
+							{
+								viziosversion = "${module_version[i]}"
+								viziosversions = viziosversion.substring(0, viziosversion.length() - 4)
+							
+								//get vizios version file from artifactory
+								env.viziosversionmodulename = "${viziosversions}-versions.txt"
+							
+								sh '''
+									rm -rf vizios-versions
+									mkdir vizios-versions
+								'''
+							
+								rtDownload (
+								serverId: 'artifactory',
+								spec:
+									"""{
+										"files": [
+											{
+										  	 "pattern": "${module_download_artifactory_path[i]}${viziosversionmodulename}",
+										  	 "target": "./vizios-versions/",
+										  	 "flat": "true"
+											}
+									 	]
+									 }"""
+								)
+							
+								if (fileExists("vizios-versions/${viziosversionmodulename}")) 
+								{
+                            
+									env.vizios_module_versions = sh(script: 'cat ./vizios-versions/"${viziosversionmodulename}"', returnStdout: true).trim()
+							
+							    		sh '''
+							    			cd vizios-versions
+							    			modfiedViziOSResult=$(tr -d '\n' < ${viziosversionmodulename})
+							    			echo "$modfiedViziOSResult" > "ViziOSResult.txt"
+							    		'''
+								
+									def newslackobj1 = [
+										"type": "mrkdwn",
+										"text": "*VIZIOS-MODULE-VERSIONS*:\n${vizios_module_versions}"
+									]
+									slackobj2.add(newslackobj1)
+								
+								
+									env.vizios_module_version_final_result = sh(script: "cat ./vizios-versions/ViziOSResult.txt | sed 's/ /\\ /g'", returnStdout: true).trim()
+							  
+									//confluence
+									confluence_inputs="${confluence_inputs}<td><p>VIZIOS-MODULE-VERSIONS:\\ <b>${vizios_module_version_final_result}<\\/b><\\/p><\\/td>"
+								
+									//add data to release notes
+									readContent = readFile "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}-releasenotes.txt"
+									writeFile file: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}-releasenotes.txt", text: readContent+"\r\n VIZIOS-MODULE-VERSIONS: ${vizios_module_versions}"
+								} 
+								else 
+								{
+    									println "no version file for vizios"
+								}
+							}
+							//end of vizios module version 
+						
+							//add data to release notes
+							readContent = readFile  "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}-releasenotes.txt"
+                        				writeFile file:  "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}-releasenotes.txt", text: readContent+"\r\n ${module_name[i]}: ${module_version[i].substring(0, module_version[i].length()-4)}"
+						
+							rtDownload (
+								serverId: 'artifactory',
+								spec:
+								"""{
+									"files": [
+										{
+									  	 "pattern": "${path}",
+									  	 "target": "firmware-package-modules/",
+									  	 "flat": "true"
+										}
+								 	]
+								 }"""
+							)
+							if( module_name[i] == "BROWSERCTRLSCRIPT")
+							{	
+								sh """ 
+									./"${path_for_rearranging_module[i]}""${rearranging_module_script_name[i]}" "firmware-package-modules/" "${chipset}"
+									cp "${path_for_rearranging_module[i]}""${rearranging_module_output_name[i]}" "firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"
+                               					"""
+                                				repack_inputs="${repack_inputs} firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/${rearranging_module_output_name[i]}"
+							
+							}
+							else{
+								//if re arranging script path is not null then call the individual module script 
+								if(path_for_rearranging_module[i] != "NULL")
+								{
+									sh """ 
+										./"${path_for_rearranging_module[i]}""${rearranging_module_script_name[i]}" "firmware-package-modules/${module_version[i]}" "${chipset}"
+										cp "${path_for_rearranging_module[i]}""${rearranging_module_output_name[i]}" "firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"
+                               						"""
+                                					repack_inputs="${repack_inputs} firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/${rearranging_module_output_name[i]}"
+								}
+								else 
+								{
+									repack_inputs="${repack_inputs} firmware-package-modules/${module_version[i]}"
+									sh """ 
+										cp "firmware-package-modules/${module_version[i]}" "firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"
+									"""
+								}
+							}
+						}
+					}
+					
+					//confluence inputs start
+					//date
+					def now = new Date()
+					currentDate = now.format("YYYY-MM-dd HH:mm", TimeZone.getTimeZone('CST'))
+					confluence_release_date="<td><p>RELEASE DATE(year-month-day):\\ <b>${currentDate}<\\/b><\\/p><\\/td>"
+					
+					//firmware version number
+					confluence_firmware_version="<td><p>FIRMWARE VERSION:\\ <b>${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/b><\\/p><\\/td>"
+					
+					//chipset
+					confluence_chipset="<td><p>CHIPSET:\\ <b>${chipset}<\\/b><\\/p><\\/td>"
+					
+					confluence_release_status=""
+					confluence_release_notes=""
+					confluence_output_stored=""
+					confluence_ota=""
+					if ( "${release_type}" == "nightly" )
+					{
+						//release status
+						confluence_release_status="<td><p>ReleaseStatus:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p><ac:structured-macro\\ ac:name=\\\\\"status\\\\\"\\ ac:schema-version=\\\\\"1\\\\\"\\ ac:macro-id=\\\\\"ba1cdd8f-51f8-4d41-bba7-35327a8c8fe9\\\\\"><ac:parameter\\ ac:name=\\\\\"title\\\\\">NIGHTLY-RELEASE-TO-DEV<\\/ac:parameter><ac:parameter\\ ac:name=\\\\\"colour\\\\\">Grey<\\/ac:parameter><\\/ac:structured-macro><\\/p><\\/td>"	
+						
+						//QA releasenotes
+						confluence_release_notes="<td><p>ReleaseNotesDEVQA:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p>NOT-APPLICABLE<\\/p><\\/td>"
+						
+						//where output is stored ftp or artifactory
+						confluence_output_stored="<td><p>SignedOutput:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}:\\ <b>ARTIFACTORY<\\/b><\\/p><\\/td>"
+					
+						//If OTA is yes or no
+						confluence_ota="<td><p>OTA:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}:\\ <b>FALSE<\\/b><\\/p><\\/td>"
+					
+					}
+					if ( "${release_type}" == "feature" )
+					{
+						//release status
+						confluence_release_status="<td><p>ReleaseStatus:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p><ac:structured-macro\\ ac:name=\\\\\"status\\\\\"\\ ac:schema-version=\\\\\"1\\\\\"\\ ac:macro-id=\\\\\"ba1cdd8f-51f8-4d41-bba7-35327a8c8fe9\\\\\"><ac:parameter\\ ac:name=\\\\\"title\\\\\">FEATURE-RELEASE<\\/ac:parameter><ac:parameter\\ ac:name=\\\\\"colour\\\\\">Grey<\\/ac:parameter><\\/ac:structured-macro><\\/p><\\/td>"	
+						
+						//QA releasenotes
+						confluence_release_notes="<td><p>ReleaseNotesDEVQA:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p>NOT-APPLICABLE<\\/p><\\/td>"
+						
+						//where output is stored ftp or artifactory
+						confluence_output_stored="<td><p>SignedOutput:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}:\\ <b>NA<\\/b><\\/p><\\/td>"
+					
+						//If OTA is yes or no
+						confluence_ota="<td><p>OTA:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}:\\ <b>NA<\\/b><\\/p><\\/td>"
+					
+					}
+					if ( "${release_type}" == "official" )
+					{
+						//release status
+						confluence_release_status="<td><p>ReleaseStatus:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p><ac:structured-macro\\ ac:name=\\\\\"status\\\\\"\\ ac:schema-version=\\\\\"1\\\\\"\\ ac:macro-id=\\\\\"ba1cdd8f-51f8-4d41-bba7-35327a8c8fe9\\\\\"><ac:parameter\\ ac:name=\\\\\"title\\\\\">RELEASE-TO-DEVQA<\\/ac:parameter><ac:parameter\\ ac:name=\\\\\"colour\\\\\">Grey<\\/ac:parameter><\\/ac:structured-macro><\\/p><\\/td>"				
+						//QA releasenotes
+						confluence_release_notes="<td><p>ReleaseNotesDEVQA:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><\\/td>"
+						//where output is stored ftp or artifactory
+						confluence_output_stored="<td><p>SignedOutput:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}:\\ <b>FTP<\\/b><\\/p><\\/td>"
+					
+						//If OTA is yes or no
+						confluence_ota="<td><p>OTA:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}:\\ <b>TRUE<\\/b><\\/p><\\/td>"
+					}
+					
+					if ( "${soc}" == "MTK" )
+					{
+						//SOC releasenotes
+						confluence_soc_release_notes="<td><p>ReleaseNotesSOC:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p><b><a\\ href=\\\\\"https:\\/\\/artifactory.vizio.com\\/artifactory\\/vizio-dallas-soc-mtk\\/mtk-to-vizio\\/release-notes\\/${model}\\/${base_firmware_version_stripped}\\/\\\\\">SOC-RELEASE-NOTES<\\/a><\\/b><\\/p><\\/td>"
+					}else{
+						//SOC releasenotes
+						modeln = "${model}".toLowerCase()
+						confluence_soc_release_notes="<td><p>ReleaseNotesSOC:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><p><b><a\\ href=\\\\\"https:\\/\\/artifactory.vizio.com\\/artifactory\\/vizio-dallas-soc-vs\\/vs-to-vizio\\/release-notes\\/${modeln}\\/${base_firmware_version_stripped}\\/\\\\\">SOC-RELEASE-NOTES<\\/a><\\/b><\\/p><\\/td>"
+					}
+					
+					//DLM
+					confluence_dlm="<td><p>DLM-BINARIES:${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}<\\/p><\\/td>"
+					
+					confluence_inputs="<tr>${confluence_release_date}${confluence_firmware_version}${confluence_chipset}${confluence_release_status}${confluence_release_notes}${confluence_soc_release_notes}${confluence_inputs}${confluence_output_stored}${confluence_ota}${confluence_dlm}<\\/tr>"
+					println "confluence_inputs============= ${confluence_inputs}==============="
+					//confluence inputs end
+					
+					//repack script is called to repack all the selected modules
+					sh """
+						echo "========================Repackaging the firmware============================="
+						sudo ./repack-fw.sh ${base_firmware} ${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL} ${repack_inputs}
+						echo "========================End of Repackaging the firmware============================="
+					"""
+					
+					
+					//upload all repack modules to artifactory
+					rtUpload (
+						serverId: 'artifactory',
+						spec:
+							"""{
+							"files": [
+								 {
+								   "pattern": "firmware-package-modules/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/*",
+								   "target": "${firmware_repack_vizio_modules_upload_path}/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"
+								}
+							]
+						}"""
+					)
+				}
+            		}
+        	}
+		stage("Test new firmware"){
+            		steps {
+                		script{
+					if (chipset == "sx7a" || chipset == "sx7b")
+					{
+						sh label: '', script: "sudo ./validate_fw.sh ${base_firmware} ${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}.zip"
+					} else {
+						sh label: '', script: "sudo ./validate_fw.sh ${base_firmware} ${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}.tgz"
+					}
+				}
+            		}
+        	}
+		stage('DelProps Artifactory') {
+            		steps {
+                		rtDeleteProps (
+                   		serverId: 'artifactory',
+		   		props: 'release.repack.type',
+		   		spec:
+                       			"""{
+                           			"files": [
+                               			{
+                                  			"pattern": "${firmware_repack_upload_path}/*",
+                                  			"props": "release.repack.type=${base_firmware_version_stripped}-devlatest"				
+                                		}
+                            			]
+                        		}"""
+                		)
+            		}
+        	}
+		stage('Publish output to Artifactory') {
+            		steps {
+				script{
+					//upload version file
+					rtUpload (
+                   			serverId: 'artifactory',
+                   			spec:
+                       				"""{
+                           				"files": [
+                               				{
+                                  				"pattern": "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}-releasenotes.txt",
+                                  				"target": "${firmware_repack_module_release_notes_upload_path}/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"           								  
+                                			}
+                            				]
+                        			}"""
+                			)
+					//upload firmware to sign in directory
+					rtUpload (
+                   			serverId: 'artifactory',
+                   			spec:
+                       				"""{
+                           				"files": [
+                               				{
+                                  				"pattern": "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}*",
+                                  				"target": "${vizio_sign_in_path}/${chipset}/"           								  
+                                			}
+                            				]
+                        			}"""
+                			)
+					
+					env.base_firmware_version_release_type = "${base_firmware_version_release_type}"
+					println "====base_firmware_version_release_type: ${base_firmware_version_release_type}"
+	
+					if (chipset == "sx7a" || chipset == "sx7b"){
+                				rtUpload (
+                   				serverId: 'artifactory',
+                   				spec:
+                       					"""{
+                           					"files": [
+                               					{
+                                  					"pattern": "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}.zip",
+                                  					"target": "${firmware_repack_upload_path}/",
+				  					"props": "release.repack.type=${base_firmware_version_stripped}-devlatest;release.version=${release_type};release.repack.feature=${base_firmware_version_release_type}"            								  
+                                				}
+                            					]
+                        				}"""
+                				)
+					} else {
+						rtUpload (
+                   				serverId: 'artifactory',
+                   				spec:
+                       					"""{
+                           					"files": [
+                               					{
+                                  					"pattern": "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}.tgz",
+                                  					"target": "${firmware_repack_upload_path}/",
+				  					"props": "release.repack.type=${base_firmware_version_stripped}-devlatest;release.version=${release_type};release.repack.feature=${base_firmware_version_release_type}"            								  
+                                				}
+                            					]
+                        				}"""
+                				)
+					}
+	        		}
+                		sh label: '', script: 'rm -rf *'
+            		}
+        	}
+		stage('Git tag') {
+            		steps {
+				sh label: '', script: '''
+		                      cd "${upstream}"
+				      git checkout "${manifest_file_name}"
+				      git tag --force "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"
+                                      git push --force origin "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"
+				  
+				      rm -rf "${upstream}"
+				      
+                                      '''
+            		}
+        	}
+	}
+	post{ 
+    		success {
+			script {
+				def attachments_success = [
+  				[
+    					text: "Released to QA : *${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}*\n Signed Firmware will be available in 20 mins ",
+    					color: "#00ff00"
+
+  				]
+				]
+				
+			   	if ( "${release_type}" == "official"){
+			     		slackSend (attachments: attachments_success, channel: "${slack_channel_weekly}")
+			    	}
+			
+				def success_attc = [ 
+				[
+					"type": "divider"
+				],
+				[
+					"type": "section",
+					"text": [
+						"type": "mrkdwn",
+						"text": ":small_blue_diamond: :sparkles: *Firmware Release for ${release_type} : ${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}* :sparkles: :small_blue_diamond: \n *Firmware inserted module versions* :arrow_down:"
+					]
+				],
+				[
+					"type": "divider"
+				],
+				[
+					"type": "section",
+					"fields": slackobj1
+				],
+					[
+					"type": "section",
+					"fields": slackobj2
+				],
+				[
+					"type": "section",
+					"text": [
+						"type": "mrkdwn",
+						"text": "<${manifest_pipeline_url}|Click here to know the differences in the firmware >"
+					]
+				],
+				[
+					"type": "section",
+					"text": [
+						"type": "mrkdwn",
+    						"text": "Checkout manifest branch : ${manifest_file_name}"
+					]
+  				]
+            			]
+				slackSend (blocks: success_attc, channel: "${slack_channel}",botUser: true, tokenCredentialId: 'slack-bot')
+				
+		
+				//update confluence
+				env.pageid = callConfluence("${confluence_inputs}")
+				
+				if ( "${signing_type}" == "sideload" ){
+					
+					//Triggring sideload signing pipeline
+					build job: "${sideload_signing_pipeline_job_name}", wait: false, parameters: [ string(name: 'firmware_version', value: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"), string(name: 'emailaddress', value: "${emailaddress}"), string(name: 'pageid', value: "${pageid}"), string(name: 'subPageName', value: "${release_type}-${manifest_file_name}"), string(name: 'chipset', value: "${chipset}"), string(name: 'model', value: "${model}"), string(name: 'slack_channel', value: "${slack_channel}") ]    
+				}
+				if ( "${signing_type}" == "sideload-dev" ){
+					
+					//Triggring sideload signing pipeline
+					build job: "${sideload_dev_signing_pipeline_job_name}", wait: false, parameters: [ string(name: 'firmware_version', value: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"), string(name: 'emailaddress', value: "${emailaddress}"), string(name: 'pageid', value: "${pageid}"), string(name: 'subPageName', value: "${release_type}-${manifest_file_name}"), string(name: 'chipset', value: "${chipset}"), string(name: 'model', value: "${model}"), string(name: 'slack_channel', value: "${slack_channel}") ]    
+				}
+				if ( "${signing_type}" == "ota" ){
+					
+					//Triggring sideload signing pipeline
+					build job: "${ota_signing_pipeline_job_name}", wait: false, parameters: [ string(name: 'firmware_version', value: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"), string(name: 'pageid', value: "${pageid}"), string(name: 'subPageName', value: "${release_type}-${manifest_file_name}"), string(name: 'chipset', value: "${chipset}"), string(name: 'model', value: "${model}"), string(name: 'slack_channel', value: "${slack_channel}") ]    
+				}
+				
+				if ( "${approval_type}" == "official" )
+				{
+					//Triggring Approval pipeline
+					build job: "${approval_devqa_pipeline_job_name}", wait: false, parameters: [ string(name: 'firmware_version', value: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"),string(name: 'chipset', value: "${chipset}"), string(name: 'subChildPageName', value: "${release_type}-${manifest_file_name}"), string(name: 'release_version', value: "${manifest_file_name}"), string(name: 'pageid', value: "${pageid}"), string(name: 'vizio_repack_module_upload_artifactory_path', value: "${firmware_repack_vizio_modules_upload_path}/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"), string(name: 'vizio_repack_module_upload_artifactory_path_to_soc', value: "${vizio_repack_module_upload_artifactory_path_to_soc}${chipset}/"),string(name: 'firmware_repack_module_version_release_notes_vizio_path', value: "${firmware_repack_module_release_notes_upload_path}/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"), string(name: 'readContent', value:"${readContent}")] 
+				}
+				if ( "${approval_type}" == "dev" )
+				{
+					//Triggring Approval pipeline
+					build job: "${approval_dev_pipeline_job_name}", wait: false, parameters: [ string(name: 'firmware_version', value: "${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}"),string(name: 'chipset', value: "${chipset}"), string(name: 'subChildPageName', value: "${release_type}-${manifest_file_name}"), string(name: 'release_version', value: "${manifest_file_name}"), string(name: 'pageid', value: "${pageid}"), string(name: 'vizio_repack_module_upload_artifactory_path', value: "${firmware_repack_vizio_modules_upload_path}/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"), string(name: 'vizio_repack_module_upload_artifactory_path_to_soc', value: "${vizio_repack_module_upload_artifactory_path_to_soc}${chipset}/"),string(name: 'firmware_repack_module_version_release_notes_vizio_path', value: "${firmware_repack_module_release_notes_upload_path}/${NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}/"), string(name: 'readContent', value:"${readContent}")] 
+				}
+				
+				def path = ""
+				if (chipset == "15x"){ path="1/0" }
+				if (chipset == "17x"){ path="1/1" }
+				if (chipset == "18x"){ path="1/1" }
+				if (chipset == "30x"){ path="1/2" }
+				if (chipset == "31x"){ path="1/3" }
+				if (chipset == "32x"){ path="1/5" }
+				if (chipset == "33x"){ path="1/4" }
+				if (chipset == "34x"){ path="1/6" }
+				if (chipset == "sx7a"){ path="0/1" }
+				if (chipset == "sx7b"){ path="0/2" }
+			
+				// Update axial file list.
+                		def now = new Date()
+                		def des = now.format("yyyy-MM-dd.HH.mm.ss", TimeZone.getTimeZone('CST'))
+                
+                		println "des: ${des}"
+				
+			    	sh """
+				 sudo rm -rf manifest.list
+				"""
+			    	rtDownload (
+				serverId: 'artifactory',
+				spec:
+					"""{
+						"files": [
+							{
+						  	 "pattern": "vizio-dallas-axial/manifest.list",
+						  	 "target": "./",
+						  	 "flat": "true"
+							}
+					 	]
+					 }"""
+				)
+				readContent = readFile "manifest.list"
+				writeFile file: "manifest.list", text: readContent+"\napp/${path}/${release_type}/${NEW_FIRMWARE_VERSION_NUMBER}/${des}/fw-repack-manifest.json"
+				
+				sh """
+					sudo jfrog rt del -quiet "vizio-dallas-axial/manifest.list*"
+				"""
+				rtUpload (
+                   		serverId: 'artifactory',
+                   		spec:
+                       			"""{
+                           			"files": [
+                               				{
+                                  			"pattern": "./manifest.list",
+                                  			"target": "vizio-dallas-axial/"     								  
+                                			},
+							{
+                                  			"pattern": "/var/lib/jenkins/jobs/${JOB_NAME}/builds/${BUILD_NUMBER}/fw-repack-manifest.json",
+                                  			"target": "vizio-dallas-axial/app/${path}/${release_type}/${NEW_FIRMWARE_VERSION_NUMBER}/${des}/"         								  
+                                			}
+                            			]
+                        		}"""
+                		)
+				sh """
+					rm -rf manifest.list manifest.json fw-repack-manifest.json
+				"""
+       			}
+		}
+		failure {
+			script {
+				def attachments_failed = [
+  				[
+    					text: "Build FAILED\n Project Name: *${env.JOB_NAME}*\n Repackaged FW Number for ${release_type} : *${params.NEW_FIRMWARE_VERSION_NUMBER_WITH_MODEL}*\n Build url:${env.BUILD_URL}",
+    					color: "#ff0000"
+  				]
+				]
+          			slackSend (attachments: attachments_failed, channel: "${slack_channel}")
+			}
+       		}
+    	}
+}
+
+def callConfluence(def message){
+	script {
+		withCredentials([usernamePassword(credentialsId: 'confluence-id-geetica', passwordVariable: 'password', usernameVariable: 'username')]) {
+    
+                	env.mess="${message}"
+                	sh '''
+				#releases page id
+                		parentPageID='1567031422'
+                				
+				#soc child page name 
+				childPageName="${chipset}"
+						
+				#sub child page name
+				subChildPageName="${release_type}-${manifest_file_name}"
+						
+				#Check if child page exist(soc), if not create child page 
+                		checkifChildPageExist=$(curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${childPageName}"&spaceKey=TPF&expand=history" | jq .results)
+                		if [ ${#checkifChildPageExist[@]} -eq 2 ]; then
+					echo "creating new child page"
+					curl --user $username:$password -X POST -H 'Content-Type: application/json' -d '{"type":"page","title":"'$childPageName'","ancestors":[{"id":"'$parentPageID'"}], "space":{"key":"TPF"},"body":{"storage":{"value":"","representation":"storage"}}}' https://vizio-sc.atlassian.net/wiki/rest/api/content/ | python -mjson.tool
+					childPageID=$(curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${childPageName}"&spaceKey=TPF&expand=history" | jq .results[].id)
+					childPageID="${childPageID#\\"}" 
+               				export childPageID="${childPageID%\\"}"
+							
+				fi
+						
+				childPageID=$(curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${childPageName}"&spaceKey=TPF&expand=history" | jq .results[].id)
+				childPageID="${childPageID#\\"}" 
+               			export childPageID="${childPageID%\\"}"
+							
+				#check if sub child exist(release),if not create sub child page
+				checkifSubChildPageExist=$(curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${subChildPageName}"&spaceKey=TPF&expand=history" | jq .results)
+                		if [ ${#checkifSubChildPageExist[@]} -eq 2 ]; then
+					echo "creating new sub child page"
+					curl --user $username:$password -X POST -H 'Content-Type: application/json' -d '{"type":"page","title":"'$subChildPageName'","ancestors":[{"id":"'$childPageID'"}], "space":{"key":"TPF"},"body":{"storage":{"value":"","representation":"storage"}}}' https://vizio-sc.atlassian.net/wiki/rest/api/content/ | python -mjson.tool
+					subChildPageID=$(curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${subChildPageName}"&spaceKey=TPF&expand=history" | jq .results[].id)
+					subChildPageID="${subChildPageID#\\"}" 
+               				subChildPageID="${subChildPageID%\\"}"
+								
+					#create empty table
+					emptyTable='<table><tbody><tr><td></td></tr></tbody></table>'
+					#push empty table to confluence
+                    			curl --user $username:$password -g -X PUT -H 'Content-Type: application/json' -d '{"id":"'$subChildPageID'","type":"page","title":"'$subChildPageName'","space":{"key":"TPF"},"body":{"storage":{"value":"'$emptyTable'","representation":"storage"}},"version":{"number":"2", "minorEdit":true}}' https://vizio-sc.atlassian.net/wiki/rest/api/content/$subChildPageID | python -mjson.tool
+                		fi						
+						
+				subChildPageID=$(curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${subChildPageName}"&spaceKey=TPF&expand=history" | jq .results[].id)
+				subChildPageID="${subChildPageID#\\"}" 
+               			subChildPageID="${subChildPageID%\\"}"
+						
+				pageversion=$(curl --user $username:$password "https://vizio-sc.atlassian.net/wiki/rest/api/content/$subChildPageID?expand=version" | jq .version.number)
+                		pageversion=$((pageversion+1))
+                		echo $pageversion
+						
+                                #get content of the confluence sub page
+              			getXMLContent=$(curl --user $username:$password "https://vizio-sc.atlassian.net/wiki/rest/api/content/$subChildPageID?expand=body.storage" | jq .body.storage.value)
+			    	#Strip first and last character
+				getXMLContent="${getXMLContent%\\"}"
+                		getXMLContent="${getXMLContent#\\"}" 
+                				
+				#replace >< with a new line and store it in 
+                		orig="><"
+                		replace=">\\n<"
+                		echo "$getXMLContent" | sed -e "s/${orig}/${replace}/g"  > originalContent.xml
+               
+	       			#Add a new row on top of the existing table using sed(after tbody)
+                		sed '/<tbody>/a '"$mess"'' originalContent.xml > modfiedConfluenceContent.xml 
+               
+               			cat modfiedConfluenceContent.xml > modfiedConfluenceContent.txt
+                		modfiedConfluenceContentResult=$(tr -d '\n' < modfiedConfluenceContent.txt)
+               
+               			curl --user $username:$password -g -X PUT -H 'Content-Type: application/json' -d '{"id":"'$subChildPageID'","type":"page","title":"'$subChildPageName'","space":{"key":"TPF"},"body":{"storage":{"value":"'"$modfiedConfluenceContentResult"'","representation":"storage"}},"version":{"number":"'$pageversion'", "minorEdit":true}}' https://vizio-sc.atlassian.net/wiki/rest/api/content/$subChildPageID | python -mjson.tool
+                	'''
+			env.subChildPageName="${release_type}-${manifest_file_name}"
+			env.subChildPageID = sh (script: 'curl --user $username:$password -X GET "https://vizio-sc.atlassian.net/wiki/rest/api/content?title="${subChildPageName}"&spaceKey=TPF&expand=history" | jq .results[].id', returnStdout: true).trim()	
+                }
+		return "${subChildPageID}"
+	}	
+}
