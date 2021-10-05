@@ -1,0 +1,16 @@
+job('demooo'){
+    steps {
+        shell('echo Hello World!')
+    }
+}
+pipelineJob('example-seed') {
+    definition {
+        cpsScm {
+            scm {
+                git('https://github.com/BuddyTV/vizio-dallas-firmware-release.git')
+            }
+	        scriptPath('Jenkinsfile-manifest')
+
+        }
+    }
+}
