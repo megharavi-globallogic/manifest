@@ -1,0 +1,14 @@
+pipeline { 
+  agent any
+    stages{
+      stage("delete-docker-images){
+            steps{
+              script{
+                  sh '''
+                   '''
+              }
+            }
+      }
+   }
+}
+            
