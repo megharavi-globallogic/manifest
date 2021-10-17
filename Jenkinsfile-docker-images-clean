@@ -5,6 +5,22 @@ pipeline {
             steps{
               script{
                   sh '''
+                        docker images --filter "dangling=true" > docker_images
+                        total_lines = $(wc -l docker_images | cut -d' ' -f 1)
+                        i=2
+                        if [$i -lt $total_lines]
+                        then
+                        docker_image = $(cat docker_images | head -n $i | tail -1)
+                        docker_image_date = $($docker_image | awk '{$4 $5 $6}')
+                        if ['$docker_image_date' -match '^*weeksago$'] || ['$docker_image_date' -match '15daysago']
+                        echo '$docker_image'
+                        
+                         
+                        
+                        
+                       
+                       
+                       
                    '''
               }
             }
